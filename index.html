@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -686,13 +687,14 @@
     border-radius: 10px;
     margin-bottom: 12px;
     background: var(--surface);
-    /* overflow: clip clips content visually like hidden, but does NOT
-       create a containing block for sticky descendants. This lets the
-       floating-X close button stick to the viewport as the user
-       scrolls through a long article. Falls back to hidden in older
-       browsers (which is still fine for visual clipping). */
-    overflow: hidden;
-    overflow: clip;
+    /* No overflow here. position: sticky on the floating close-X
+       depends on every ancestor having no overflow clipping at all
+       (overflow: hidden, scroll, auto — and even overflow: clip in
+       some browsers — establishes a sticky containing block, which
+       would pin the X to the article instead of the viewport).
+       The border-radius works fine without clipping because the
+       head and body each have their own padding and the corners
+       only show at the head's rounded top, where nothing overflows. */
   }
   .rg-section-head {
     width: 100%;
@@ -1195,6 +1197,44 @@
   }
   .thread-card-essay em { font-style: italic; }
 
+  /* Short callout used at the top of a thread essay to point the
+     reader to a related excursus or background reading before the
+     essay proper. A small inset block, not a paragraph buried in
+     the prose. Used both in the standalone thread page (via
+     .thread-card-essay) and in the inline thread excursus that
+     appears in the letter after the first-appearance verse
+     (via .thread-excursus). */
+  .thread-note {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    padding: 12px 16px;
+    margin: 0 0 22px 0;
+    background: rgba(0,0,0,0.04);
+    border-left: 3px solid currentColor;
+    border-radius: 0 8px 8px 0;
+    opacity: 0.92;
+    color: var(--ink);
+  }
+  .thread-note strong {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .thread-note a {
+    color: var(--accent-strong);
+    border-bottom: 1px solid currentColor;
+    text-decoration: none;
+    font-style: italic;
+  }
+  .thread-note a:hover {
+    opacity: 0.7;
+  }
+  @media (prefers-color-scheme: dark) {
+    .thread-note {
+      background: rgba(255,255,255,0.06);
+    }
+  }
+
   /* Cross-reference inline links inside essays */
   .essay-xref {
     color: inherit;
@@ -1417,21 +1457,6 @@
     font-variant-numeric: tabular-nums;
     margin-top: 1px;
   }
-  /* Paraphrase TOC: verse range sits directly under the chapter
-     link (the chapter doesn't have sub-items), so style it as a
-     block under the link rather than as a sub-item child. */
-  .para-toc .letter-toc-section-link {
-    margin-bottom: 0;
-  }
-  .para-toc-range {
-    display: block;
-    color: var(--ink-faint);
-    font-size: 11.5px;
-    font-variant-numeric: tabular-nums;
-    margin-top: 2px;
-    font-weight: 400;
-    padding-left: 18px;
-  }
   .letter-toc-hint {
     margin-top: 12px;
     padding-top: 12px;
@@ -1573,9 +1598,7 @@
     border: 1px solid var(--rule);
     border-radius: 10px;
     background: var(--surface);
-    /* See .rg-section for rationale — overflow: clip preserves sticky. */
-    overflow: hidden;
-    overflow: clip;
+    /* No overflow — see .rg-section for the sticky-X rationale. */
   }
   .structure-note .sn-head {
     display: flex;
@@ -1604,12 +1627,12 @@
   }
   .structure-note.expanded .sn-chev { transform: rotate(180deg); color: var(--accent); }
   .structure-note .sn-body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.5s ease, padding 0.3s ease;
-    padding: 0 24px;
+    /* display toggle (not max-height animation) so the sticky-X
+       close button inside isn't trapped by overflow: hidden. */
+    display: none;
+    padding: 4px 24px 18px 24px;
   }
-  .structure-note.expanded .sn-body { max-height: 3000px; padding: 4px 24px 18px 24px; }
+  .structure-note.expanded .sn-body { display: block; padding: 4px 24px 18px 24px; }
   .structure-note .sn-body p {
     font-size: 15.5px;
     line-height: 1.7;
@@ -1628,9 +1651,7 @@
     border: 1px solid var(--rule);
     border-radius: 10px;
     background: var(--surface);
-    /* See .rg-section for rationale — overflow: clip preserves sticky. */
-    overflow: hidden;
-    overflow: clip;
+    /* No overflow — see .rg-section for the sticky-X rationale. */
   }
   .commentary-map-collapsible .cm-head {
     display: flex;
@@ -1688,7 +1709,11 @@
      ========================================================= */
   .collapsible-close {
     position: sticky;
-    top: 12px;
+    /* Sit below the sticky topbar (which is ~60–70px tall) plus
+       a small gap. If the topbar height changes, this value can
+       be tweaked; on mobile the topbar is shorter, hence the
+       smaller value in the @media (max-width: 720px) block. */
+    top: 72px;
     align-self: flex-end;
     width: 32px;
     height: 32px;
@@ -1706,6 +1731,12 @@
     cursor: pointer;
     padding: 0;
     z-index: 5;
+    /* Pull the button back so it overlays the article content
+       rather than pushing it down. align-self: flex-end places
+       it right; margin-right: 8px gives a touch of breathing
+       room from the wrapper's right border. */
+    margin-right: 8px;
+    margin-bottom: -32px;
     transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
     -webkit-tap-highlight-color: transparent;
   }
@@ -1734,6 +1765,14 @@
       border-color: rgba(255,255,255,0.24);
     }
   }
+  /* Letter route has TWO sticky bars above the content: the main
+     topbar (~60px) AND the letter-toolbar (sticky at top: 64px,
+     ~44px tall). The default top: 72px would tuck the close X
+     directly behind the letter-toolbar. Push it down so it clears
+     both bars with a comfortable gap. Other views (excursus,
+     reading-galatians) have only the main topbar, so the default
+     72px is correct there. */
+  body.letter-route .collapsible-close { top: 120px; }
   /* When a collapsible is closed, the close button must not be
      visible (the body itself is collapsed). The :not selectors below
      pair with the various "expanded/open" classes per collapsible. */
@@ -2369,6 +2408,41 @@
     font-weight: 500;
     letter-spacing: -0.005em;
     margin: 0;
+  }
+
+  /* Section heading inside a chapter — a quieter break than the
+     chapter heading, sitting between verse rows where Paul's
+     argument moves into a new sub-section ("The greeting",
+     "The astonishment and the anathema", etc.). Used as a scroll
+     target for the paraphrase TOC sub-section links. */
+  .para-section-header {
+    margin: 36px 0 14px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--rule);
+  }
+  /* When a section header immediately follows a chapter header,
+     suppress the dashed rule and tighten spacing — the chapter
+     header already provides a strong visual break. */
+  .para-chapter-header + .para-section-header {
+    margin-top: 8px;
+    padding-top: 0;
+    border-top: none;
+  }
+  .para-section-title {
+    font-family: "Iowan Old Style", Charter, Georgia, serif;
+    font-size: 19px;
+    font-weight: 500;
+    line-height: 1.3;
+    margin: 0;
+    color: var(--ink);
+  }
+  .para-section-range {
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
   }
 
   .para-verse {
@@ -3306,6 +3380,34 @@
     .thread-banner h2 { font-size: 26px; }
     .movement-card { padding: 18px 18px; }
     .movement-card .name { font-size: 18px; }
+    /* Mobile topbar is shorter — pull the floating close button up. */
+    .collapsible-close { top: 60px; }
+    /* But on the Letter route, the letter-toolbar (sticky at top: 60px,
+       ~36px tall) needs clearing too, same as desktop. */
+    body.letter-route .collapsible-close { top: 108px; }
+
+    /* Commentary Map cards — on mobile, the 110px label column
+       crushes the value column into 1–2 words per line. Stack the
+       label above the value instead, and tighten card padding. */
+    .commentary-map-collapsible .cm-body { padding: 6px 14px 18px; }
+    .movement-card { padding: 16px 14px; gap: 10px; }
+    .movement-card .gutter { min-width: 28px; }
+    .movement-card .roman { font-size: 28px; }
+    .movement-card .kv {
+      grid-template-columns: 1fr;
+      gap: 2px 0;
+      margin-bottom: 16px;
+    }
+    .movement-card .kv .label {
+      padding-top: 0;
+      margin-bottom: -2px;
+    }
+    .movement-card .head-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+    .movement-card .verses { font-size: 12.5px; }
   }
 
   /* =========================================================
@@ -4184,6 +4286,7 @@
       letter-spacing: 0.18em !important;
     }
     .structure-note .sn-body {
+      display: block !important;
       max-height: none !important;
       overflow: visible !important;
       padding: 0 0 4pt 16pt !important;
@@ -5012,7 +5115,7 @@
     <a href="#/paraphrase" data-route="paraphrase">Paraphrase</a>
     <a href="#/threads" data-route="threads">Threads</a>
     <a href="#/glossary" data-route="glossary">Glossary</a>
-    <a href="#/excursus" data-route="excursus">Excursus</a>
+    <a href="#/deep-dives" data-route="excursus">Deep Dives</a>
     <a href="#/search" data-route="search">Search</a>
     <a href="#/about" data-route="about">About</a>
   </nav>
@@ -5180,7 +5283,7 @@ const THREADS = {
 const ESSAY_CONTENT = {
   "why": {
     "title": "Why This Commentary Exists",
-    "html": "<p>Every commentary is written for a reason. This one is no exception.</p>\n<p>I have spent many years with Paul’s letter to the Galatians, and I have come to believe that the way it has been read for much of the last five hundred years has captured something true about its message while missing something larger. This commentary is my attempt to put the larger thing back where it belongs.</p>\n<p>The reading I inherited — and that my fathers in the faith inherited before me — went something like this. Paul, a guilty sinner laboring under the impossible demands of the law, at last found peace through the doctrine of justification by faith. He then wrote Romans and Galatians to free other guilty sinners from the burden of trying to earn their righteousness by their works. Salvation is by grace alone. Boasting is excluded. Christ is enough. The trembling conscience may rest.</p>\n<p>That reading is not false. I want to be plain about this from the beginning. Paul’s gospel does indeed free the guilty sinner. It does silence boasting. It does deliver the conscience that has been trying to build its own righteousness. These are real effects of his gospel, and they have been preached faithfully from countless pulpits, including many of our own, with great pastoral power. I have preached them myself. I will preach them again.</p>\n<p>But over the years of careful study, I have come to see that these true effects of Paul’s gospel are not quite the same thing as the purpose for which Paul wrote Galatians. That distinction — between <em>effect</em> and <em>purpose</em> — is the hinge upon which this entire commentary turns, and I will return to it many times. The older reading captured a true effect of Paul’s gospel while quietly mistaking that effect for his central purpose. And once we ask after Paul’s purpose, the letter begins to open in ways that the inherited reading did not always allow it to open.</p>\n<p>Paul did not write Galatians as a free-standing sermon against moral effort in the abstract, nor as a timeless lecture against the human tendency to earn what can only be received as gift. He wrote it as a pastor in alarm, because the churches he had planted were being pressured by certain teachers to take on circumcision and the Mosaic law in order to be recognized as full covenant members of the people of God. The question burning in the Galatian churches was not, in the first instance, “How may I, a guilty sinner, find peace with God?” The question was, “Must the Gentiles become Jews in order to belong fully to the God of Abraham?”</p>\n<p>Paul’s answer to that question is the burden of the letter we are about to read. The answer is no, and it is an emphatic no, and the reasons he gives for that no are some of the richest theology in the New Testament. Christ has come. The promise to Abraham has been fulfilled. The Spirit has been given. The age of the law as the boundary marker of God’s people has reached its appointed end, and the family of Abraham has been opened to the nations. That is the gospel Paul is fighting for in this letter.</p>\n<p>I want to assure the reader, before we go any further, what this commentary is not.</p>\n<p>It is not an attack upon the Reformation. The Reformation recovered the great truths that salvation is by grace and not by human merit, that Scripture is the church’s final authority, and that every believer stands directly before God in Christ. None of those truths will be touched in this commentary. They will be defended.</p>\n<p>It is not a denial of justification by faith. The doctrine that sinners are accepted by God not on the basis of their own works but on the basis of what Christ has done is the very ground I stand upon as I write. That doctrine will be honored and exposited throughout the chapters that follow.</p>\n<p>It is not a softening of sovereign grace. If anything, the reading I will be commending makes salvation rest even more entirely upon what Christ has done, and even less upon the strength of our own believing. The Primitive Baptist reader will find sovereign grace not diminished but deepened in the pages ahead.</p>\n<p>And it is not an importing of strange new doctrines into the Primitive Baptist tradition. The instincts of this tradition — its reverence for the finished work of Christ, its rejection of human merit, its careful distinction between what God has done and what man receives — fit naturally within the reading I will be commending, perhaps more naturally than within the reading the wider Protestant world has long taken for granted.</p>\n<p>What this commentary is, then, is an attempt to give the reader Galatians in something nearer to its proper context. Paul’s letter does not need to be made small in order to be useful. It is already great. My hope is that by the time the reader reaches the end of the sixth chapter, the letter will appear larger than it did at the beginning — not because anything has been added to it, but because some things that had quietly been taken away are being put back.</p>\n<p>The commentary that follows is organized around five theological threads which I have found to recur and develop across the six chapters of the letter. These threads are introduced briefly in the Reading Map that follows this section and treated at greater length in the essays preceding it. The reader who wishes to take the threads first is welcome to do so; the reader who wishes to begin with the verse-by-verse commentary may do that as well, and return to the threads as they appear in the margins. Either path is good. Both arrive at the same destination.</p>\n<p>I have written this commentary as a pastor, for pastors and for the people they serve. It is not an academic monograph. The notes are few; the prose is plain; the goal throughout is the edification of the church. But within those pastoral limits, I have tried to write a commentary that takes the letter as seriously as the letter deserves to be taken — which means setting it down, as carefully as I can, into the world it was actually written to address.</p>\n<p>If the reading I am about to commend is correct, then Paul’s letter to the Galatians is not less than the Reformation taught us it was. It is more. And the gospel it proclaims is not smaller, but greater.</p>\n<p>That is why this commentary exists.</p>\n<p class=\"signature\">— <em>Elder Michael L. Montgomery</em></p>"
+    "html": "<p>Every commentary is written for a reason. This one is no exception.</p>\n<p>I have spent many years with Paul’s letter to the Galatians, and I have come to believe that the way it has been read for much of the last five hundred years has captured something true about its message while missing something larger. This commentary is my attempt to put the larger thing back where it belongs.</p>\n<p>The reading I inherited — and that my fathers in the faith inherited before me — went something like this. Paul, a guilty sinner laboring under the impossible demands of the law, at last found peace through the doctrine of justification by faith. He then wrote Romans and Galatians to free other guilty sinners from the burden of trying to earn their righteousness by their works. Salvation is by grace alone. Boasting is excluded. Christ is enough. The trembling conscience may rest.</p>\n<p>That reading is not false. I want to be plain about this from the beginning. Paul’s gospel does indeed free the guilty sinner. It does silence boasting. It does deliver the conscience that has been trying to build its own righteousness. These are real effects of his gospel, and they have been preached faithfully from countless pulpits, including many of our own, with great pastoral power. I have preached them myself. I will preach them again.</p>\n<p>But over the years of careful study, I have come to see that these true effects of Paul’s gospel are not quite the same thing as the purpose for which Paul wrote Galatians. That distinction — between <em>effect</em> and <em>purpose</em> — is the hinge upon which this entire commentary turns, and I will return to it many times. The older reading captured a true effect of Paul’s gospel while quietly mistaking that effect for his central purpose. And once we ask after Paul’s purpose, the letter begins to open in ways that the inherited reading did not always allow it to open.</p>\n<p>Paul did not write Galatians as a free-standing sermon against moral effort in the abstract, nor as a timeless lecture against the human tendency to earn what can only be received as gift. He wrote it as a pastor in alarm, because the churches he had planted were being pressured by certain teachers to take on circumcision and the Mosaic law in order to be recognized as full covenant members of the people of God. The question burning in the Galatian churches was not, in the first instance, “How may I, a guilty sinner, find peace with God?” The question was, “Must the Gentiles become Jews in order to belong fully to the God of Abraham?”</p>\n<p>Paul’s answer to that question is the burden of the letter we are about to read. The answer is no, and it is an emphatic no, and the reasons he gives for that no are some of the richest theology in the New Testament. Christ has come. The promise to Abraham has been fulfilled. The Spirit has been given. The age of the law as the covenant mark of God’s people has reached its appointed end, and the family of Abraham has been opened to the nations. That is the gospel Paul is fighting for in this letter.</p>\n<p>I want to assure the reader, before we go any further, what this commentary is not.</p>\n<p>It is not an attack upon the Reformation. The Reformation recovered the great truths that salvation is by grace and not by human merit, that Scripture is the church’s final authority, and that every believer stands directly before God in Christ. None of those truths will be touched in this commentary. They will be defended.</p>\n<p>It is not a denial of justification by faith. The doctrine that sinners are accepted by God not on the basis of their own works but on the basis of what Christ has done is the very ground I stand upon as I write. That doctrine will be honored and exposited throughout the chapters that follow.</p>\n<p>It is not a softening of sovereign grace. If anything, the reading I will be commending makes salvation rest even more entirely upon what Christ has done, and even less upon the strength of our own believing. The Primitive Baptist reader will find sovereign grace not diminished but deepened in the pages ahead.</p>\n<p>And it is not an importing of strange new doctrines into the Primitive Baptist tradition. The instincts of this tradition — its reverence for the finished work of Christ, its rejection of human merit, its careful distinction between what God has done and what man receives — fit naturally within the reading I will be commending, perhaps more naturally than within the reading the wider Protestant world has long taken for granted.</p>\n<p>What this commentary is, then, is an attempt to give the reader Galatians in something nearer to its proper context. Paul’s letter does not need to be made small in order to be useful. It is already great. My hope is that by the time the reader reaches the end of the sixth chapter, the letter will appear larger than it did at the beginning — not because anything has been added to it, but because some things that had quietly been taken away are being put back.</p>\n<p>The commentary that follows is organized around five theological threads which I have found to recur and develop across the six chapters of the letter. These threads are introduced briefly in the Reading Map that follows this section and treated at greater length in the essays preceding it. The reader who wishes to take the threads first is welcome to do so; the reader who wishes to begin with the verse-by-verse commentary may do that as well, and return to the threads as they appear in the margins. Either path is good. Both arrive at the same destination.</p>\n<p>I have written this commentary as a pastor, for pastors and for the people they serve. It is not an academic monograph. The notes are few; the prose is plain; the goal throughout is the edification of the church. But within those pastoral limits, I have tried to write a commentary that takes the letter as seriously as the letter deserves to be taken — which means setting it down, as carefully as I can, into the world it was actually written to address.</p>\n<p>If the reading I am about to commend is correct, then Paul’s letter to the Galatians is not less than the Reformation taught us it was. It is more. And the gospel it proclaims is not smaller, but greater.</p>\n<p>That is why this commentary exists.</p>\n<p class=\"signature\">— <em>Elder Michael L. Montgomery</em></p>"
   },
   "how-read": {
     "title": "How Galatians Has Been Read",
@@ -5192,7 +5295,7 @@ const ESSAY_CONTENT = {
   },
   "apoc": {
     "title": "The Apocalyptic Age",
-    "html": "<p>There is a word that has gathered up much of what is most distinctive about Paul’s gospel, and it is a word the modern church has not always known what to do with. The word is <em>apocalyptic</em>. In common speech it has come to mean disaster, ruin, or the end of the world — images of catastrophe drawn from the book of Revelation and from popular Christian writing about the last days. That is not what the word means here. In Paul’s vocabulary, apocalyptic refers to something larger and stranger than disaster. It refers to the conviction that the living God has invaded the present age in the death and resurrection of Jesus Christ, and that nothing about the world can ever be the same.</p>\n<p>To put it plainly: the age to come has already begun. The future, in a real sense, has already arrived. And the gospel is the announcement of it.</p>\n<p>This conviction stands behind everything Paul writes in Galatians, and the careful reader will see it surface at one passage after another. Once it is named and understood, it begins to organize the whole letter.</p>\n<h3>What Paul Means by an “Age”</h3>\n<p>When Paul speaks of “this present evil world” in Galatians 1:4, the word translated <em>world</em> in our King James Bibles is not <em>kosmos</em>, the created order of land and sea and sky. It is <em>aiōn</em>, a word that means <em>age</em> or <em>era</em>. Paul is not describing the physical creation as evil. The earth God made remains the earth God made, and the heavens still declare His glory. What Paul is describing is something different: the present epoch of human history considered as a whole, the era in which sin and death have held dominion, the time between the fall in Eden and the consummation that is yet to come.</p>\n<p>This way of thinking about history was not Paul’s invention. The Jewish writers of the centuries before Christ had long divided history into two ages — the present age, marked by sin, suffering, and the rule of hostile powers, and the age to come, marked by the reign of God, the resurrection of the dead, the gathering of His people, and the renewal of creation. The two ages were sharply distinct. Between them lay a decisive act of God which would bring the old age to an end and inaugurate the new.</p>\n<p>What was new in Paul’s gospel was not the framework of two ages. What was new was Paul’s conviction that the decisive act of God had already taken place. The age to come had not merely been promised. It had begun. And it had begun precisely in the death and resurrection of Jesus Christ.</p>\n<h3>The Cross as the Hinge of the Ages</h3>\n<p>This is why, when Paul writes that Christ “gave Himself for our sins, that He might deliver us from this present evil world” (1:4), he is not describing a private spiritual transaction. He is describing a cosmic event. Christ did not merely make it possible for individual sinners to feel forgiven. He invaded the domain of the present evil age and snatched His people out of it. The Greek word translated <em>deliver</em> in our Bibles is the language of rescue under fire — of pulling someone out of a burning building, of snatching a captive away from his enemies. Paul means it that way.</p>\n<p>The cross, in Paul’s gospel, is the hinge upon which the ages turn. Before the cross, the present evil age held sway. After the cross, the powers of the old order have been defeated, the new creation has been inaugurated, and the people of God are living in the overlap of two ages — the old not yet fully gone, the new already begun.</p>\n<p>This is why Paul will write later in the letter that “when the fulness of the time was come, God sent forth His Son” (4:4). The phrase “the fulness of the time” is not a poetic flourish. It carries the technical sense of the appointed moment, the hour fixed by God for the turning of the ages, the hinge upon which history itself was made to pivot. That hour has come. The Son has been sent. The age of the law has been brought to its purpose, and the age of the Spirit has dawned.</p>\n<p>And this is why Paul will conclude the letter, at 6:14–15, by glorying not in any human achievement but in the cross of Christ — and by declaring, in the very next breath, that “in Christ Jesus neither circumcision availeth any thing, nor uncircumcision, but a new creature.” The cross has brought one age to an end. The new creature is what has begun in its place.</p>\n<h3>Why This Matters for the Galatian Crisis</h3>\n<p>If the reader has followed this far, the great practical urgency of the apocalyptic dimension of Paul’s gospel begins to come into view. The Galatian believers were being pressured by certain teachers to take on circumcision and the law of Moses as the price of full covenant membership. Paul’s answer to that pressure is not merely that justification is by faith and not by works — though of course it is. Paul’s answer reaches further down than that. His answer is that the age in which circumcision and Torah observance functioned as the boundary marker of God’s people <em>has come to an end</em>. To insist on those things now is not simply to misunderstand the gospel. It is to act as though the death and resurrection of Christ never happened. It is to live as though the rescue is still pending, when the rescue has already come.</p>\n<p>This is why Paul writes with such alarm in this letter. The Galatian teachers were not merely confused about a few points of doctrine. They were trying to drag the believers back across a line the cross of Christ had already crossed. They were trying to live in the old age after God Himself had announced that the new age had begun.</p>\n<p>The pastoral implications of this reach into every chapter of Galatians. The Christian life is not a careful negotiation of one’s standing within the old order, by means of religious observances and legal performances. It is the life of those who have been transferred, by the work of Christ, into the new creation. The Spirit has been given as the down payment of the age to come. The law has been brought to its appointed end. The boundary markers of the old people of God have been replaced by the boundary marker of the new — which is Christ Himself.</p>\n<h3>Listening for this thread in the letter</h3>\n<p>The apocalyptic note in Paul’s gospel will not be hard to hear once the reader knows what to listen for. It surfaces wherever Paul speaks of ages, of deliverance from a present evil order, of the fullness of time, of the cross as the crucifixion of an old world, of new creation breaking forth. The thread is marked in the margin of the commentary where it surfaces most plainly, but the marking is an aid, not a substitute for the reader’s own ear.</p>\n<p>These passages are not isolated mentions of an apocalyptic theme that Paul could have left out without harm to his argument. They are the load-bearing beams of the letter. To miss the apocalyptic dimension of Paul’s gospel is to miss something essential about why he wrote with such fire, why the Galatian error was so dangerous, and why the cross of Christ is so absolutely central. The careful reader will find Paul returning to this conviction again and again, in different language and from different angles, but always saying at bottom the same thing.</p>\n<p>The age to come has already begun. The future has already arrived. And the gospel is the announcement of it.</p>"
+    "html": "<p class=\"thread-note\"><strong>A word about the word.</strong> Before we use <em>apocalyptic</em> in the technical sense Paul gives it, it is worth pausing to ask what an apocalypse really is — because the modern ear hears the word and pictures disaster, and that is not what Paul means by it. An apocalypse, rightly understood, is the moment when one age of the world ends and another begins. The ending is real; so is the beginning; and the two cannot be separated without distorting the word. The full case is set down in the deep dive titled <a href=\"#/excursus/what-is-apocalypse\">What an Apocalypse Actually Is</a>, which the reader who has not yet read it may wish to take up before reading on.</p>\n<p>There is a word that has gathered up much of what is most distinctive about Paul’s gospel, and it is a word the modern church has not always known what to do with. The word is <em>apocalyptic</em>. In common speech it has come to mean disaster, ruin, or the end of the world — images of catastrophe drawn from the book of Revelation and from popular Christian writing about the last days. That is not what the word means here. In Paul’s vocabulary, apocalyptic refers to something larger and stranger than disaster. It refers to the conviction that the living God has invaded the present age in the death and resurrection of Jesus Christ, and that nothing about the world can ever be the same.</p>\n<p>To put it plainly: the age to come has already begun. The future, in a real sense, has already arrived. And the gospel is the announcement of it.</p>\n<p>This conviction stands behind everything Paul writes in Galatians, and the careful reader will see it surface at one passage after another. Once it is named and understood, it begins to organize the whole letter.</p>\n<h3>What Paul Means by an “Age”</h3>\n<p>When Paul speaks of “this present evil world” in Galatians 1:4, the word translated <em>world</em> in our King James Bibles is not <em>kosmos</em>, the created order of land and sea and sky. It is <em>aiōn</em>, a word that means <em>age</em> or <em>era</em>. Paul is not describing the physical creation as evil. The earth God made remains the earth God made, and the heavens still declare His glory. What Paul is describing is something different: the present epoch of human history considered as a whole, the era in which sin and death have held dominion, the time between the fall in Eden and the consummation that is yet to come.</p>\n<p>This way of thinking about history was not Paul’s invention. The Jewish writers of the centuries before Christ had long divided history into two ages — the present age, marked by sin, suffering, and the rule of hostile powers, and the age to come, marked by the reign of God, the resurrection of the dead, the gathering of His people, and the renewal of creation. The two ages were sharply distinct. Between them lay a decisive act of God which would bring the old age to an end and inaugurate the new.</p>\n<p>What was new in Paul’s gospel was not the framework of two ages. What was new was Paul’s conviction that the decisive act of God had already taken place. The age to come had not merely been promised. It had begun. And it had begun precisely in the death and resurrection of Jesus Christ.</p>\n<h3>The Cross as the Hinge of the Ages</h3>\n<p>This is why, when Paul writes that Christ “gave Himself for our sins, that He might deliver us from this present evil world” (1:4), he is not describing a private spiritual transaction. He is describing a cosmic event. Christ did not merely make it possible for individual sinners to feel forgiven. He invaded the domain of the present evil age and snatched His people out of it. The Greek word translated <em>deliver</em> in our Bibles is the language of rescue under fire — of pulling someone out of a burning building, of snatching a captive away from his enemies. Paul means it that way.</p>\n<p>The cross, in Paul’s gospel, is the hinge upon which the ages turn. Before the cross, the present evil age held sway. After the cross, the powers of the old order have been defeated, the new creation has been inaugurated, and the people of God are living in the overlap of two ages — the old not yet fully gone, the new already begun.</p>\n<p>This is why Paul will write later in the letter that “when the fulness of the time was come, God sent forth His Son” (4:4). The phrase “the fulness of the time” is not a poetic flourish. It carries the technical sense of the appointed moment, the hour fixed by God for the turning of the ages, the hinge upon which history itself was made to pivot. That hour has come. The Son has been sent. The age of the law has been brought to its purpose, and the age of the Spirit has dawned.</p>\n<p>And this is why Paul will conclude the letter, at 6:14–15, by glorying not in any human achievement but in the cross of Christ — and by declaring, in the very next breath, that “in Christ Jesus neither circumcision availeth any thing, nor uncircumcision, but a new creature.” The cross has brought one age to an end. The new creature is what has begun in its place.</p>\n<h3>Why This Matters for the Galatian Crisis</h3>\n<p>If the reader has followed this far, the great practical urgency of the apocalyptic dimension of Paul’s gospel begins to come into view. The Galatian believers were being pressured by certain teachers to take on circumcision and the law of Moses as the price of full covenant membership. Paul’s answer to that pressure is not merely that justification is by faith and not by works — though of course it is. Paul’s answer reaches further down than that. His answer is that the age in which circumcision and Torah observance functioned as the covenant mark of God’s people <em>has come to an end</em>. To insist on those things now is not simply to misunderstand the gospel. It is to act as though the death and resurrection of Christ never happened. It is to live as though the rescue is still pending, when the rescue has already come.</p>\n<p>This is why Paul writes with such alarm in this letter. The Galatian teachers were not merely confused about a few points of doctrine. They were trying to drag the believers back across a line the cross of Christ had already crossed. They were trying to live in the old age after God Himself had announced that the new age had begun.</p>\n<p>The pastoral implications of this reach into every chapter of Galatians. The Christian life is not a careful negotiation of one’s standing within the old order, by means of religious observances and legal performances. It is the life of those who have been transferred, by the work of Christ, into the new creation. The Spirit has been given as the down payment of the age to come. The law has been brought to its appointed end. The covenant marks of the old people of God have been replaced by the covenant mark of the new — which is Christ Himself.</p>\n<h3>Listening for this thread in the letter</h3>\n<p>The apocalyptic note in Paul’s gospel will not be hard to hear once the reader knows what to listen for. It surfaces wherever Paul speaks of ages, of deliverance from a present evil order, of the fullness of time, of the cross as the crucifixion of an old world, of new creation breaking forth. The thread is marked in the margin of the commentary where it surfaces most plainly, but the marking is an aid, not a substitute for the reader’s own ear.</p>\n<p>These passages are not isolated mentions of an apocalyptic theme that Paul could have left out without harm to his argument. They are the load-bearing beams of the letter. To miss the apocalyptic dimension of Paul’s gospel is to miss something essential about why he wrote with such fire, why the Galatian error was so dangerous, and why the cross of Christ is so absolutely central. The careful reader will find Paul returning to this conviction again and again, in different language and from different angles, but always saying at bottom the same thing.</p>\n<p>The age to come has already begun. The future has already arrived. And the gospel is the announcement of it.</p>"
   },
   "faith": {
     "title": "The Faithfulness of Christ",
@@ -5200,7 +5303,7 @@ const ESSAY_CONTENT = {
   },
   "badge": {
     "title": "Faith as Covenant Badge",
-    "html": "<p>The third thread runs alongside the second and must be carefully distinguished from it. The faithfulness of Christ, as we have just seen, refers to Christ’s own obedient covenant fidelity — His doing, His suffering, His accomplishing. The thread we now take up concerns the believer’s faith, but with a particular question in view: not merely <em>what</em> faith is, but <em>what work it does in the argument of Galatians</em>.</p>\n<p>In the letter to the Galatians, faith functions in a way the modern reader does not always notice at first. Faith is not only the inward act by which the soul rests upon Christ. Faith is also the <em>defining mark</em> of the people of God under the new covenant. It is the badge of who belongs. It is the boundary marker that distinguishes Abraham’s true family from those outside it. To grasp this is to understand much of what Paul is fighting for.</p>\n<h3>The Question Behind the Whole Letter</h3>\n<p>The Galatian crisis was not first of all a question about how an individual sinner could quiet his conscience before God. It was a question about <em>who counted as the covenant people of God</em>. The teachers who had come into Galatia were insisting that Gentile believers must be circumcised and must take on the law of Moses in order to be recognized as full members of Abraham’s family. Their argument had a kind of force to it. Had not God Himself commanded circumcision to Abraham (Genesis 17)? Had not the Mosaic covenant defined the boundaries of God’s people for fifteen hundred years? On what basis could a Gentile believer claim to belong, without coming under those boundaries?</p>\n<p>Paul’s answer is not that the boundary markers do not matter. Paul’s answer is that the boundary marker <em>has changed</em>. Under the old covenant, the visible boundary of God’s people was circumcision and Torah observance — these were the badges that marked Jew off from Gentile and identified who belonged to the covenant family. But under the new covenant, the badge has been replaced. The defining mark of the people of God is no longer a mark in the flesh. It is faith in Christ.</p>\n<h3>Faith as Identification</h3>\n<p>Consider how Paul speaks in chapter three. “Know ye therefore,” he writes, “that they which are of faith, the same are the children of Abraham” (3:7). The verse is not chiefly concerned with how Abraham’s children get to heaven. It is concerned with <em>who they are</em>. The children of Abraham are <em>those who are of faith</em>. Faith is what identifies them. Faith is what marks them out from those who are not Abraham’s children.</p>\n<p>The same pattern continues. “They which be of faith are blessed with faithful Abraham” (3:9). “Ye are all the children of God by faith in Christ Jesus” (3:26). “If ye be Christ’s, then are ye Abraham’s seed, and heirs according to the promise” (3:29). In each case the question is not first how the individual receives eternal salvation, but who belongs to the covenant family. And the answer in each case is the same: those who are of faith.</p>\n<p>This is also why Paul can speak so sharply against circumcision in the second half of the letter. He is not saying that the physical act of circumcision is intrinsically wrong. He is saying that to take on circumcision <em>as the badge of covenant membership</em> is to deny that the badge has changed. It is to act as though the old covenant boundary markers are still in force, when in fact Christ has come and the new badge — faith — has been established in their place.</p>\n<h3>What This Reading Preserves</h3>\n<p>A Primitive Baptist reader may wonder, at this point, whether such a reading of faith threatens the doctrines of sovereign grace and the inward work of the Spirit. It does not. It deepens them.</p>\n<p>Faith as the covenant badge is not merely an outward profession. The faith that marks out the people of God is the faith given by the Spirit, drawn from the heart that has been made new. To say that faith is the badge of covenant membership is not to say that anyone who claims faith therefore belongs. It is to say that the work of the Spirit, producing genuine faith in the heart, is precisely what God uses to identify His own. The boundary marker is faith — and faith is itself the gift of God. The badge is not earned. It is given.</p>\n<p>This reading also clarifies an old confusion. Sometimes well-meaning preachers, defending sovereign grace, have spoken almost as though faith were unimportant — as though to emphasize faith were to compromise the freeness of grace. That instinct comes from a good place, but it is not Paul’s instinct. Paul is happy to emphasize faith because faith, in his theology, is itself the gracious work of God in the soul. To say that faith identifies the people of God is not to say that human believing earns covenant membership. It is to say that the Spirit who produces faith is the same Spirit who marks out the people of the new covenant.</p>\n<h3>Listening for this thread in the letter</h3>\n<p>The badge function of faith runs through nearly every passage where Paul speaks of who belongs to Abraham’s family, of what circumcision can and cannot accomplish, and of what marks the people of God off from those outside the covenant. Chapter three is built upon this thread from beginning to end, and the reader will hear it surfacing again in chapters five and six, where the old covenant boundary marker is set aside and the new boundary marker is named in its place.</p>\n<p>The badge of the old order has been laid aside. A new badge has been raised in its place. That badge is faith, and the people who bear it are Abraham’s true family.</p>"
+    "html": "<p>The third thread runs alongside the second and must be carefully distinguished from it. The faithfulness of Christ, as we have just seen, refers to Christ’s own obedient covenant fidelity — His doing, His suffering, His accomplishing. The thread we now take up concerns the believer’s faith, but with a particular question in view: not merely <em>what</em> faith is, but <em>what work it does in the argument of Galatians</em>.</p>\n<p>In the letter to the Galatians, faith functions in a way the modern reader does not always notice at first. Faith is not only the inward act by which the soul rests upon Christ. Faith is also the <em>defining mark</em> of the people of God under the new covenant. It is the badge of who belongs. It is the covenant mark that distinguishes Abraham’s true family from those outside it. To grasp this is to understand much of what Paul is fighting for.</p>\n<h3>The Question Behind the Whole Letter</h3>\n<p>The Galatian crisis was not first of all a question about how an individual sinner could quiet his conscience before God. It was a question about <em>who counted as the covenant people of God</em>. The teachers who had come into Galatia were insisting that Gentile believers must be circumcised and must take on the law of Moses in order to be recognized as full members of Abraham’s family. Their argument had a kind of force to it. Had not God Himself commanded circumcision to Abraham (Genesis 17)? Had not the Mosaic covenant defined the boundaries of God’s people for fifteen hundred years? On what basis could a Gentile believer claim to belong, without coming under those boundaries?</p>\n<p>Paul’s answer is not that the covenant marks do not matter. Paul’s answer is that the covenant mark <em>has changed</em>. Under the old covenant, the visible boundary of God’s people was circumcision and Torah observance — these were the badges that marked Jew off from Gentile and identified who belonged to the covenant family. But under the new covenant, the badge has been replaced. The defining mark of the people of God is no longer a mark in the flesh. It is faith in Christ.</p>\n<h3>Faith as Identification</h3>\n<p>Consider how Paul speaks in chapter three. “Know ye therefore,” he writes, “that they which are of faith, the same are the children of Abraham” (3:7). The verse is not chiefly concerned with how Abraham’s children get to heaven. It is concerned with <em>who they are</em>. The children of Abraham are <em>those who are of faith</em>. Faith is what identifies them. Faith is what marks them out from those who are not Abraham’s children.</p>\n<p>The same pattern continues. “They which be of faith are blessed with faithful Abraham” (3:9). “Ye are all the children of God by faith in Christ Jesus” (3:26). “If ye be Christ’s, then are ye Abraham’s seed, and heirs according to the promise” (3:29). In each case the question is not first how the individual receives eternal salvation, but who belongs to the covenant family. And the answer in each case is the same: those who are of faith.</p>\n<p>This is also why Paul can speak so sharply against circumcision in the second half of the letter. He is not saying that the physical act of circumcision is intrinsically wrong. He is saying that to take on circumcision <em>as the badge of covenant membership</em> is to deny that the badge has changed. It is to act as though the old covenant marks are still in force, when in fact Christ has come and the new badge — faith — has been established in their place.</p>\n<h3>What This Reading Preserves</h3>\n<p>A Primitive Baptist reader may wonder, at this point, whether such a reading of faith threatens the doctrines of sovereign grace and the inward work of the Spirit. It does not. It deepens them.</p>\n<p>Faith as the covenant badge is not merely an outward profession. The faith that marks out the people of God is the faith given by the Spirit, drawn from the heart that has been made new. To say that faith is the badge of covenant membership is not to say that anyone who claims faith therefore belongs. It is to say that the work of the Spirit, producing genuine faith in the heart, is precisely what God uses to identify His own. The covenant mark is faith — and faith is itself the gift of God. The badge is not earned. It is given.</p>\n<p>This reading also clarifies an old confusion. Sometimes well-meaning preachers, defending sovereign grace, have spoken almost as though faith were unimportant — as though to emphasize faith were to compromise the freeness of grace. That instinct comes from a good place, but it is not Paul’s instinct. Paul is happy to emphasize faith because faith, in his theology, is itself the gracious work of God in the soul. To say that faith identifies the people of God is not to say that human believing earns covenant membership. It is to say that the Spirit who produces faith is the same Spirit who marks out the people of the new covenant.</p>\n<h3>Listening for this thread in the letter</h3>\n<p>The badge function of faith runs through nearly every passage where Paul speaks of who belongs to Abraham’s family, of what circumcision can and cannot accomplish, and of what marks the people of God off from those outside the covenant. Chapter three is built upon this thread from beginning to end, and the reader will hear it surfacing again in chapters five and six, where the old covenant mark is set aside and the new covenant mark is named in its place.</p>\n<p>The badge of the old order has been laid aside. A new badge has been raised in its place. That badge is faith, and the people who bear it are Abraham’s true family.</p>"
   },
   "part": {
     "title": "Participation in Christ",
@@ -5340,7 +5443,7 @@ const GREEK = {
     note: "Christ's own covenant fidelity, obedient self-offering, trustworthy fulfillment of the redemptive mission. The objective ground of the believer's acceptance before God \u2014 not the believer's act of believing, but what Christ has faithfully done.",
     occurrences: ["2:16", "2:17-21", "3:15-29"] },
   "hoi_ek_pisteos": { term: "hoi ek piste\u014ds", script: "\u03bf\u1f31 \u1f10\u03ba \u03c0\u03af\u03c3\u03c4\u03b5\u03c9\u03c2", pos: "phrase", gloss: "those of faith",
-    note: "A covenantal designation, not merely a description. Faith is the badge that identifies the true children of Abraham \u2014 the true people of God \u2014 replacing circumcision as the boundary marker of the covenant community.",
+    note: "A covenantal designation, not merely a description. Faith is the badge that identifies the true children of Abraham \u2014 the true people of God \u2014 replacing circumcision as the covenant mark of the covenant community.",
     occurrences: ["3:6-9", "3:10-14"] },
   "paidagogos": { term: "paidag\u014dgos", script: "\u03c0\u03b1\u03b9\u03b4\u03b1\u03b3\u03c9\u03b3\u03cc\u03c2", pos: "noun", gloss: "guardian, custodian, child-attendant",
     note: "Translated \"schoolmaster\" in the KJV. In the ancient world, the paidag\u014dgos was the household slave who supervised and disciplined a child until maturity. Paul's metaphor for the law's temporary, custodial function until Christ came.",
@@ -5413,8 +5516,8 @@ const EXCURSUSES = {
       { type: "h", text: "\u201COf faith\u201D as a defining identity" },
       { type: "p", text: "The Greek phrase Paul uses repeatedly in Galatians 3 is hoi ek pistes \u2014 literally, \u201Cthose of faith\u201D or \u201Cthose who are of faith.\u201D This is not simply a description of people who happen to believe something. It is a covenantal designation \u2014 a way of identifying who belongs to a particular community, much as one might speak of \u201Cthose of the circumcision\u201D as a way of identifying a particular group. When Paul says in 3:7 that \u201Cthey which are of faith, the same are the children of Abraham,\u201D he is making a covenantal claim with enormous practical consequences. To be \u201Cof faith\u201D is to belong to Abraham's family." },
       { type: "p", text: "This explains why Paul can say with such confidence that \u201Cthere is neither Jew nor Greek, there is neither bond nor free, there is neither male nor female: for ye are all one in Christ Jesus\u201D (3:28). These distinctions are not erased from human experience. But none of them determines covenantal standing or access to the blessings promised to Abraham. All of that is determined by one thing alone: belonging to Christ through faith." },
-      { type: "h", text: "Faith replacing circumcision as the covenant marker" },
-      { type: "p", text: "Under the old covenant, circumcision served as the visible, public sign of membership in God's covenant people. It was the boundary marker \u2014 the practice that distinguished Israel from the nations. Paul's argument in Galatians is that with the coming of Christ and the dawning of the new covenant era, faith has taken the place of circumcision as the defining covenant marker. This is not because God has abandoned His concern for visible, communal signs of belonging. It is because the reality to which circumcision pointed has now been accomplished through union with Christ in His death and resurrection. Baptism, not circumcision, now serves as the public, communal sign of that union (3:27)." },
+      { type: "h", text: "Faith replacing circumcision as the covenant mark" },
+      { type: "p", text: "Under the old covenant, circumcision served as the visible, public sign of membership in God's covenant people. It was the covenant mark \u2014 the practice that distinguished Israel from the nations. Paul's argument in Galatians is that with the coming of Christ and the dawning of the new covenant era, faith has taken the place of circumcision as the defining covenant mark. This is not because God has abandoned His concern for visible, communal signs of belonging. It is because the reality to which circumcision pointed has now been accomplished through union with Christ in His death and resurrection. Baptism, not circumcision, now serves as the public, communal sign of that union (3:27)." },
       { type: "h", text: "Practical implications" },
       { type: "p", text: "Whenever a church begins to add requirements to faith as the basis of full acceptance and belonging \u2014 whether those requirements are cultural, traditional, ethnic, or ceremonial \u2014 it is repeating the Galatian error in a new form. The false teachers required circumcision. Their successors in every generation have required other things. The principle Paul opposes is always the same: anything added to faith in Christ as a requirement for full covenant standing distorts the gospel and dishonors the One who purchased that standing at the cost of His own life." }
     ]
@@ -5427,11 +5530,39 @@ const EXCURSUSES = {
     prompt: "Paul's closing words bring the apocalyptic and participation threads to their joint climax: through the cross, the present age has been crucified and a new creation has dawned.",
     body: [
       { type: "p", text: "Paul's closing declaration brings the apocalyptic theme of Galatians to its climax. \u201CThe world is crucified unto me, and I unto the world.\u201D This is not the language of personal detachment from earthly pleasures, though it includes that. It is cosmic language \u2014 the language of death and resurrection applied to the entire existing order of things. The \u201Cworld\u201D Paul speaks of here (kosmos) refers to the present age with all of its governing structures, its values, its distinctions, and its powers. Through the cross of Christ, that world \u2014 the world in which circumcision and uncircumcision, Jew and Gentile, slave and free carried decisive covenantal weight \u2014 has been put to death." },
-      { type: "p", text: "This is why Paul can say with such finality that \u201Cneither circumcision availeth any thing, nor uncircumcision.\u201D He is not making a point about the irrelevance of religious practice in the abstract. He is declaring that the entire framework within which circumcision and uncircumcision carried covenantal significance has been crucified. The old age, with its boundary markers and its ethnic distinctions and its Mosaic economy, is gone. What has replaced it is nothing less than \u201Ca new creature\u201D \u2014 a new creation (kaine ktisis)." },
+      { type: "p", text: "This is why Paul can say with such finality that \u201Cneither circumcision availeth any thing, nor uncircumcision.\u201D He is not making a point about the irrelevance of religious practice in the abstract. He is declaring that the entire framework within which circumcision and uncircumcision carried covenantal significance has been crucified. The old age, with its covenant marks and its ethnic distinctions and its Mosaic economy, is gone. What has replaced it is nothing less than \u201Ca new creature\u201D \u2014 a new creation (kaine ktisis)." },
       { type: "h", text: "Two threads converging" },
       { type: "p", text: "Notice how two of the letter's deepest threads converge in this single declaration. The apocalyptic thread \u2014 introduced at 1:4 with \u201Cthis present evil age\u201D and developed at 1:12 (apocalyptic conversion) and 4:4 (the fullness of time) \u2014 reaches its destination here in the language of cosmic crucifixion. The participation thread \u2014 \u201CI am crucified with Christ\u201D at 2:20 \u2014 reaches its destination in the parallel language: \u201Cthe world is crucified unto me.\u201D The same death that ended Paul's old life ended the world's claim on him. To be crucified with Christ is to be crucified to the old age." },
       { type: "h", text: "What this means for the controversy" },
-      { type: "p", text: "The false teachers were trying to import the boundary markers of the old creation \u2014 circumcision, law observance, ethnic distinction \u2014 into the new creation community. Paul's apocalyptic gospel would not permit it. You cannot rebuild what the cross has crucified. You cannot reimpose the markers of the old age upon those who belong to the new. The letter that began with Christ giving Himself to deliver His people from \u201Cthis present evil age\u201D ends with the declaration that through His cross, that age has been crucified, and a new creation has dawned in its place. This is the apocalyptic frame within which the entire argument of Galatians takes place." }
+      { type: "p", text: "The false teachers were trying to import the covenant marks of the old creation \u2014 circumcision, law observance, ethnic distinction \u2014 into the new creation community. Paul's apocalyptic gospel would not permit it. You cannot rebuild what the cross has crucified. You cannot reimpose the markers of the old age upon those who belong to the new. The letter that began with Christ giving Himself to deliver His people from \u201Cthis present evil age\u201D ends with the declaration that through His cross, that age has been crucified, and a new creation has dawned in its place. This is the apocalyptic frame within which the entire argument of Galatians takes place." }
+    ]
+  },
+  "what-is-apocalypse": {
+    id: "what-is-apocalypse",
+    title: "What an Apocalypse Actually Is",
+    subtitle: "A Word About the Word",
+    anchor: "1:4",
+    prompt: "Before the apocalyptic thread can do its work in Paul's letter, the word itself needs to be rescued from what the modern ear has done to it.",
+    body: [
+      { type: "p", text: "Before we go any further with Paul's gospel, a word must be said about a word. The word is apocalypse, and it has had a hard time of it in the English language. The reader who hears it today is likely to picture meteor strikes, plagues, the empty cities of disaster movies, the last page of the book of Revelation read with a kind of dread. None of those associations is what Paul has in mind. If we begin with the modern meaning and read Paul through it, we shall find ourselves reading him backward at one of the most important points in his letter. So it is worth taking a moment to ask, plainly, what an apocalypse really is." },
+      { type: "h", text: "The everyday meaning, and why it misleads" },
+      { type: "p", text: "In ordinary modern speech, an apocalypse is the end of the world. The word is shorthand for catastrophe, for ruin on a scale beyond recovery. A film about a comet striking the earth is an apocalyptic film. A novel about civilization collapsing is a post-apocalyptic novel. The pictures the word carries are pictures of destruction with nothing on the other side of it." },
+      { type: "p", text: "This is not how the word was used in Paul's day, and it is not how Paul uses it. The destruction-only meaning is a much later development \u2014 partly the result of pop culture, partly the result of a long misreading of the book of Revelation, partly the result of the natural human habit of remembering the dark half of any image and forgetting the rest. When the reader of Galatians hears the apostle described as an apocalyptic thinker and assumes Paul is preoccupied with the end of the world, the reader has already mistaken the apostle's vocabulary." },
+      { type: "h", text: "What the word actually means" },
+      { type: "p", text: "The Greek noun behind our English word is apokalypsis, and its root meaning is not destruction but disclosure. The verb means to uncover, to unveil, to lift the lid off something so that what was hidden can finally be seen. An apocalypse is not the end of a world. It is the moment when something kept out of view is brought into the open." },
+      { type: "p", text: "From that root comes the second sense in which the word was used by Jewish writers in the centuries before Paul. They had come to use apocalypse to name a particular kind of moment in history: a moment when God Himself acts so decisively that one age of the world comes to its end and another age begins. The hidden purpose of God breaks through into open history. What had been promised is now disclosed. What had been future arrives. The old order does not simply collapse \u2014 it gives way. A new order takes its place." },
+      { type: "p", text: "So an apocalypse, in this older and stricter sense, has two halves. There is an ending, yes \u2014 something genuinely ends, and the ending is real. But there is also a beginning, and the beginning is the whole point of the ending. The two halves cannot be separated without distorting the word. To have an apocalypse without the beginning is mere disaster. To have a beginning without an ending is mere progress. An apocalypse is both at once: the decisive close of one thing, and the genuine inauguration of another." },
+      { type: "h", text: "A way to feel the word" },
+      { type: "p", text: "It may help the reader to think of an apocalypse on a human scale before we apply the word to the cosmic one. Most of us have lived through a moment when one life ended and another began. A man leaves the work he has been doing for many years and the place he has been doing it in. The settled order of his days \u2014 the friends, the routines, the assumptions, the very horizon by which he kept his bearings \u2014 is brought to a close. It is a real ending. He will not get those years back. The old life is gone." },
+      { type: "p", text: "And yet \u2014 if the Lord is kind to him \u2014 he does not arrive at the other side of that ending into nothing. He arrives into a new place. New work. New neighbors. New patterns of worship and labor and friendship. The ending he passed through was not the whole story; it was the threshold of a story he could not have entered without crossing it. The old life had to end in order for the new life to begin. Both halves are true, and they belong together." },
+      { type: "p", text: "That, in miniature, is what an apocalypse is. The end of one order; the beginning of another. The first cannot be undone, and the second is the reason the first had to end. A small apocalypse, lived on a small scale, can teach the reader something about the great one Paul is talking about. The structure is the same. The scale is different." },
+      { type: "h", text: "Why this word fits Paul's gospel" },
+      { type: "p", text: "When Paul writes that Christ \u201Cgave Himself for our sins, that He might deliver us from this present evil age\u201D (1:4), he is using apocalyptic language in this older and stricter sense. He is not announcing the end of the world. He is announcing the end of an age \u2014 the age of sin, death, and the dominion of hostile powers \u2014 and the beginning of another. The death and resurrection of Christ are the threshold between the two. The cross is not only a transaction between God and the sinner. It is the hinge upon which the ages turn." },
+      { type: "p", text: "This is why Paul can speak of the believer as one who has been rescued out of one realm and brought into another. It is why he can speak, at the end of the letter, of \u201Ca new creature\u201D (6:15) \u2014 a new creation \u2014 as the only thing that finally counts. The believer is not merely a forgiven person walking through an unchanged world. The believer is a citizen of an age that has already begun, an age that broke into history in the death and resurrection of Christ and is still spreading outward from that center." },
+      { type: "p", text: "And it is why Paul writes to the Galatians with such alarm. The teachers troubling them were trying, in effect, to live in the old age after God Himself had announced that the new one had begun. They were trying to keep the covenant marks of an order that had been brought to its end. To Paul, this was not a minor doctrinal mistake. It was a refusal to reckon with what God had actually done." },
+      { type: "h", text: "What to listen for, going forward" },
+      { type: "p", text: "Throughout this commentary, the word apocalyptic will mean what it meant in Paul's day, not what it has come to mean in ours. It will refer to the conviction that God has invaded the present age in the death and resurrection of Christ, ended one order, and inaugurated another. It will refer to a hinge in history rather than a final disaster. The reader who keeps the older meaning in mind will hear Paul more clearly. The reader who hears apocalypse and thinks first of catastrophe will find Paul a stranger." },
+      { type: "p", text: "Apocalypse, rightly understood, is the kind of word the gospel needs. It carries the seriousness of what God has ended and the hope of what He has begun. It carries them together, because they belong together. That is the word, and that is the kind of moment, with which the letter to the Galatians is going to deal." }
     ]
   }
 };
@@ -5965,7 +6096,8 @@ const VERSES = {
       "Second, the scope of His purpose: that He \"might deliver us from this present evil world.\" The Greek word translated \"world\" here is not {{g:kosmos}}, referring to the created order, but {{g:aion}}, meaning age or era. Paul was describing the present epoch of human history \u2014 the age currently under the dominion of sin and death \u2014 and declaring that Christ came to rescue His people out of it. This is apocalyptic language in the truest sense: there is the present evil age, and there is the age to come, and Christ's death and resurrection have decisively broken the power of the first and inaugurated the second.",
       "Third, the ultimate authority behind it all: \"according to the will of God and our Father.\" Salvation was not improvised. It was willed from eternity, and Christ's self-giving was the enactment of that eternal will. This grounds the gospel in something no human authority can override or improve upon."
     ],
-    threads: ["apoc"]
+    threads: ["apoc"],
+    excursusAfter: "what-is-apocalypse"
   },
   "1:5": {
     ref: "1:5", section: "The greeting",
@@ -6302,7 +6434,7 @@ Object.assign(VERSES, {
     commentary: [
       "The opening verse of chapter 5 stands as one of the great summary statements of the entire epistle. \u201CStand fast therefore in the liberty wherewith Christ hath made us free.\u201D Paul's argument from chapters 1 through 4 has established the theological basis for this exhortation. Now he draws it together into a practical command.",
       "The liberty Paul speaks of is not license. It is not freedom from all moral restraint or obligation. It is freedom from the law as a system of obtaining righteousness and covenant standing before God. Christ's death has accomplished what the Law could never accomplish. Believers stand in a gracious relationship with God that rests entirely upon Christ's finished work, not upon their own performance.",
-      "Paul's warning in verse 4 must be understood in light of the excursus on eternal and temporal salvation. When he says that those seeking justification by the law have \u201Cfallen from grace,\u201D he is describing a departure from grace as the operating principle of one's relationship with God \u2014 not a loss of eternal life. To fall from grace is to fall out of the sphere of grace's governing influence in one's practical life and assurance. It is to abandon the freedom, peace, and assurance that come from resting in Christ alone.",
+      "Paul's warning in verse 4 must be understood in light of the deep dive on eternal and temporal salvation. When he says that those seeking justification by the law have \u201Cfallen from grace,\u201D he is describing a departure from grace as the operating principle of one's relationship with God \u2014 not a loss of eternal life. To fall from grace is to fall out of the sphere of grace's governing influence in one's practical life and assurance. It is to abandon the freedom, peace, and assurance that come from resting in Christ alone.",
       "Paul then issues a remarkably strong statement: \u201CI would they were even cut off which trouble you.\u201D This is not cruelty but pastoral zeal. The false teachers were mutilating the souls of believers through their teaching. Paul's word contains a grim irony: those who insist on circumcision might as well go all the way and mutilate themselves, as the pagan priests of Cybele did. It is the kind of sharp language Paul reserved for moments when the gospel itself was at stake."
     ],
     threads: ["ets", "badge"]
@@ -6477,7 +6609,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 4:4 \u2014 the fullness of time", verseAnchor: null,
+        ref: "Galatians 4:4 \u2014 the fullness of time", verseAnchor: "4:1-7",
         context: "In the middle of the doctrinal argument, the apocalyptic clock strikes.",
         kjv: "But when the fulness of the time was come, God sent forth his Son, made of a woman, made under the law\u2026",
         commentary: [
@@ -6486,7 +6618,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 6:14\u201315 \u2014 the cross as cosmic crucifixion", verseAnchor: null,
+        ref: "Galatians 6:14\u201315 \u2014 the cross as cosmic crucifixion", verseAnchor: "6:11-18",
         context: "The thread climaxes at the autograph. The letter that began with rescue from the present evil age ends with that age itself crucified.",
         kjv: "By whom the world is crucified unto me, and I unto the world. For in Christ Jesus neither circumcision availeth any thing, nor uncircumcision, but a new creature.",
         commentary: [
@@ -6501,7 +6633,7 @@ const THREAD_PAGES = {
     timeline: ["2:16", "2:20", "3:22"],
     appearances: [
       {
-        ref: "Galatians 2:16 \u2014 the construction introduced", verseAnchor: null,
+        ref: "Galatians 2:16 \u2014 the construction introduced", verseAnchor: "2:16",
         context: "The phrase appears for the first time, twice in one verse, alongside the believer's own act of believing.",
         kjv: "\u2026a man is not justified by the works of the law, but by the faith of Jesus Christ, even we have believed in Jesus Christ, that we might be justified by the faith of Christ\u2026",
         commentary: [
@@ -6511,7 +6643,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 2:20 \u2014 the personal note", verseAnchor: null,
+        ref: "Galatians 2:20 \u2014 the personal note", verseAnchor: "2:17-21",
         context: "From the abstract grammatical construction Paul moves to the most intimate language of the letter.",
         kjv: "\u2026the life which I now live in the flesh I live by the faith of the Son of God, who loved me, and gave himself for me.",
         commentary: [
@@ -6520,7 +6652,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 3:22 \u2014 the promise channeled through Christ's faithfulness", verseAnchor: null,
+        ref: "Galatians 3:22 \u2014 the promise channeled through Christ's faithfulness", verseAnchor: "3:15-29",
         context: "In the middle of the Abraham argument, the thread returns to lock the doctrinal case.",
         kjv: "\u2026that the promise by faith of Jesus Christ might be given to them that believe.",
         commentary: [
@@ -6533,7 +6665,7 @@ const THREAD_PAGES = {
     timeline: ["3:7", "3:9", "3:26-28", "5:6"],
     appearances: [
       {
-        ref: "Galatians 3:7 \u2014 \u201cthose of faith\u201d as a covenantal designation", verseAnchor: null,
+        ref: "Galatians 3:7 \u2014 \u201cthose of faith\u201d as a covenantal designation", verseAnchor: "3:6-9",
         context: "The thesis verse. The Greek phrase hoi ek piste\u014ds is not just descriptive but identifying.",
         kjv: "Know ye therefore that they which are of faith, the same are the children of Abraham.",
         commentary: [
@@ -6542,7 +6674,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 3:9 \u2014 sharing Abraham's blessing", verseAnchor: null,
+        ref: "Galatians 3:9 \u2014 sharing Abraham's blessing", verseAnchor: "3:6-9",
         context: "The corollary follows immediately: if faith is the badge, then those who bear it share the blessing.",
         kjv: "So then they which be of faith are blessed with faithful Abraham.",
         commentary: [
@@ -6550,16 +6682,16 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 3:26\u201328 \u2014 all one in Christ", verseAnchor: null,
-        context: "The badge's practical consequence: a community in which the old boundary markers no longer determine standing.",
+        ref: "Galatians 3:26\u201328 \u2014 all one in Christ", verseAnchor: "3:15-29",
+        context: "The badge's practical consequence: a community in which the old covenant marks no longer determine standing.",
         kjv: "For ye are all the children of God by faith in Christ Jesus\u2026 There is neither Jew nor Greek, there is neither bond nor free, there is neither male nor female: for ye are all one in Christ Jesus.",
         commentary: [
-          "These distinctions are not erased from human experience. But none of them determines covenantal standing or access to the blessings promised to Abraham. All of that is determined by one thing alone: belonging to Christ through faith. Under the old covenant, circumcision served as the visible sign of membership. With the coming of Christ, faith has taken its place as the defining covenant marker.",
+          "These distinctions are not erased from human experience. But none of them determines covenantal standing or access to the blessings promised to Abraham. All of that is determined by one thing alone: belonging to Christ through faith. Under the old covenant, circumcision served as the visible sign of membership. With the coming of Christ, faith has taken its place as the defining covenant mark.",
           "Baptism, not circumcision, now serves as the public, communal sign of that union (3:27)."
         ]
       },
       {
-        ref: "Galatians 5:6 \u2014 faith working through love", verseAnchor: null,
+        ref: "Galatians 5:6 \u2014 faith working through love", verseAnchor: "5:1-12",
         context: "The thread re-emerges late in the ethics section. The badge is alive \u2014 it operates.",
         kjv: "For in Jesus Christ neither circumcision availeth any thing, nor uncircumcision; but faith which worketh by love.",
         commentary: [
@@ -6572,7 +6704,7 @@ const THREAD_PAGES = {
     timeline: ["2:19-20", "3:27", "4:19", "5:24", "6:14"],
     appearances: [
       {
-        ref: "Galatians 2:19\u201320 \u2014 the ground", verseAnchor: null,
+        ref: "Galatians 2:19\u201320 \u2014 the ground", verseAnchor: "2:17-21",
         context: "The most concentrated and personally intimate expression of participation in the letter.",
         kjv: "I am crucified with Christ: nevertheless I live; yet not I, but Christ liveth in me\u2026",
         commentary: [
@@ -6581,7 +6713,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 3:27 \u2014 the public expression", verseAnchor: null,
+        ref: "Galatians 3:27 \u2014 the public expression", verseAnchor: "3:15-29",
         context: "Participation made visible in the rite of initiation.",
         kjv: "For as many of you as have been baptized into Christ have put on Christ.",
         commentary: [
@@ -6589,7 +6721,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 4:19 \u2014 the goal", verseAnchor: null,
+        ref: "Galatians 4:19 \u2014 the goal", verseAnchor: "4:8-20",
         context: "The thread shows up in Paul's most emotionally raw passage. Participation is not just a status; it's a process.",
         kjv: "My little children, of whom I travail in birth again until Christ be formed in you\u2026",
         commentary: [
@@ -6599,7 +6731,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 5:24 \u2014 death to the flesh", verseAnchor: null,
+        ref: "Galatians 5:24 \u2014 death to the flesh", verseAnchor: "5:13-26",
         context: "In the ethics section, participation becomes the engine of sanctification.",
         kjv: "And they that are Christ's have crucified the flesh with the affections and lusts.",
         commentary: [
@@ -6607,7 +6739,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 6:14 \u2014 death to the world", verseAnchor: null,
+        ref: "Galatians 6:14 \u2014 death to the world", verseAnchor: "6:11-18",
         context: "The thread converges with the apocalyptic thread at the close.",
         kjv: "\u2026by whom the world is crucified unto me, and I unto the world.",
         commentary: [
@@ -6629,7 +6761,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 3:1\u20133 \u2014 \u201chaving begun in the Spirit\u201d", verseAnchor: null,
+        ref: "Galatians 3:1\u20133 \u2014 \u201chaving begun in the Spirit\u201d", verseAnchor: "3:1",
         context: "Paul's exasperated question presupposes that the Galatians did genuinely begin in the Spirit. The danger now is regression in present experience, not loss of eternal life.",
         kjv: "\u2026Having begun in the Spirit, are ye now made perfect by the flesh?",
         commentary: [
@@ -6637,7 +6769,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 4:11 \u2014 \u201clest I have bestowed upon you labour in vain\u201d", verseAnchor: null,
+        ref: "Galatians 4:11 \u2014 \u201clest I have bestowed upon you labour in vain\u201d", verseAnchor: "4:8-20",
         context: "Paul's genuine pastoral alarm. The labor he fears wasted is the labor of building them up into mature, free, Spirit-fruitful believers.",
         kjv: "I am afraid of you, lest I have bestowed upon you labour in vain.",
         commentary: [
@@ -6645,7 +6777,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 4:30 \u2014 \u201ccast out the bondwoman\u201d", verseAnchor: null,
+        ref: "Galatians 4:30 \u2014 \u201ccast out the bondwoman\u201d", verseAnchor: "4:21-31",
         context: "In the allegory, the language of disinheritance is uncomfortably sharp. Read in the temporal-salvation frame, the sharpness lands where it belongs.",
         kjv: "Cast out the bondwoman and her son: for the son of the bondwoman shall not be heir with the son of the freewoman.",
         commentary: [
@@ -6653,7 +6785,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 5:4 \u2014 \u201cfallen from grace\u201d", verseAnchor: null,
+        ref: "Galatians 5:4 \u2014 \u201cfallen from grace\u201d", verseAnchor: "5:1-12",
         context: "The single phrase that has caused more pastoral confusion than any other in the letter.",
         kjv: "Christ is become of no effect unto you, whosoever of you are justified by the law; ye are fallen from grace.",
         commentary: [
@@ -6662,7 +6794,7 @@ const THREAD_PAGES = {
         ]
       },
       {
-        ref: "Galatians 5:21 \u2014 \u201cshall not inherit the kingdom\u201d", verseAnchor: null,
+        ref: "Galatians 5:21 \u2014 \u201cshall not inherit the kingdom\u201d", verseAnchor: "5:13-26",
         context: "Often quoted as a threat to eternal destiny. The framework reads it as covenant-experiential.",
         kjv: "\u2026they which do such things shall not inherit the kingdom of God.",
         commentary: [
@@ -6864,7 +6996,7 @@ function renderHome() {
     { route: "paraphrase",        label: "Paraphrase" },
     { route: "threads",           label: "Threads" },
     { route: "glossary",          label: "Glossary" },
-    { route: "excursus",          label: "Excursus" },
+    { route: "deep-dives",        label: "Deep Dives" },
     { route: "search",            label: "Search" },
     { route: "about",             label: "About" },
   ];
@@ -6899,7 +7031,7 @@ const READING_GALATIANS_SECTIONS = [
       "That reading is not false. I want to be plain about this from the beginning. Paul’s gospel does indeed free the guilty sinner. It does silence boasting. It does deliver the conscience that has been trying to build its own righteousness. These are real effects of his gospel, and they have been preached faithfully from countless pulpits, including many of our own, with great pastoral power. I have preached them myself. I will preach them again.",
       "But over the years of careful study, I have come to see that these true effects of Paul’s gospel are not quite the same thing as the purpose for which Paul wrote Galatians. That distinction — between <em>effect</em> and <em>purpose</em> — is the hinge upon which this entire commentary turns, and I will return to it many times. The older reading captured a true effect of Paul’s gospel while quietly mistaking that effect for his central purpose. And once we ask after Paul’s purpose, the letter begins to open in ways that the inherited reading did not always allow it to open.",
       "Paul did not write Galatians as a free-standing sermon against moral effort in the abstract, nor as a timeless lecture against the human tendency to earn what can only be received as gift. He wrote it as a pastor in alarm, because the churches he had planted were being pressured by certain teachers to take on circumcision and the Mosaic law in order to be recognized as full covenant members of the people of God. The question burning in the Galatian churches was not, in the first instance, “How may I, a guilty sinner, find peace with God?” The question was, “Must the Gentiles become Jews in order to belong fully to the God of Abraham?”",
-      "Paul’s answer to that question is the burden of the letter we are about to read. The answer is no, and it is an emphatic no, and the reasons he gives for that no are some of the richest theology in the New Testament. Christ has come. The promise to Abraham has been fulfilled. The Spirit has been given. The age of the law as the boundary marker of God’s people has reached its appointed end, and the family of Abraham has been opened to the nations. That is the gospel Paul is fighting for in this letter.",
+      "Paul’s answer to that question is the burden of the letter we are about to read. The answer is no, and it is an emphatic no, and the reasons he gives for that no are some of the richest theology in the New Testament. Christ has come. The promise to Abraham has been fulfilled. The Spirit has been given. The age of the law as the covenant mark of God’s people has reached its appointed end, and the family of Abraham has been opened to the nations. That is the gospel Paul is fighting for in this letter.",
       "I want to assure the reader, before we go any further, what this commentary is not.",
       "It is not an attack upon the Reformation. The Reformation recovered the great truths that salvation is by grace and not by human merit, that Scripture is the church’s final authority, and that every believer stands directly before God in Christ. None of those truths will be touched in this commentary. They will be defended.",
       "It is not a denial of justification by faith. The doctrine that sinners are accepted by God not on the basis of their own works but on the basis of what Christ has done is the very ground I stand upon as I write. That doctrine will be honored and exposited throughout the chapters that follow.",
@@ -6980,7 +7112,19 @@ function renderReadingGalatians() {
     const chev = svgIcon("i-chevron-right");
     chev.classList.add("rg-chev");
     head.appendChild(chev);
-    head.addEventListener("click", () => wrap.classList.toggle("open"));
+    head.addEventListener("click", () => {
+      const wasOpen = wrap.classList.contains("open");
+      wrap.classList.toggle("open");
+      if (wasOpen) {
+        // Closing via head: scroll the now-closed marker to the
+        // top of the viewport for consistency with the X button.
+        try {
+          wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (err) {
+          wrap.scrollIntoView();
+        }
+      }
+    });
     wrap.appendChild(head);
 
     const body = el("div", { class: "rg-section-body" });
@@ -7072,7 +7216,7 @@ function renderFirstTime() {
       n: "3",
       route: "letter",
       title: "The letter",
-      desc: "The main commentary, section by section. Each verse appears in KJV with a pastoral paraphrase beside it, followed by exposition. Excursuses and thematic notes appear inline at their natural anchor points. At the top of the page you'll find a collapsible Commentary Map — Paul's six movements at a glance."
+      desc: "The main commentary, section by section. Each verse appears in KJV with a pastoral paraphrase beside it, followed by exposition. Deep dives and thematic notes appear inline at their natural anchor points. At the top of the page you'll find a collapsible Commentary Map — Paul's six movements at a glance."
     },
     {
       n: "4",
@@ -7088,8 +7232,8 @@ function renderFirstTime() {
     },
     {
       n: "6",
-      route: "excursus",
-      title: "Excursus",
+      route: "deep-dives",
+      title: "Deep Dives",
       desc: "The four longer essays that anchor major moves in the commentary — eternal and temporal salvation, participation in Christ, faith as covenant badge, and the cross as cosmic apocalyptic event. They appear inline in the letter at their proper places; this page gathers them all in one location for easier reference."
     },
     {
@@ -7267,7 +7411,16 @@ function buildStructureNote() {
   wrap.appendChild(body);
 
   head.addEventListener("click", () => {
+    const wasExpanded = wrap.classList.contains("expanded");
     wrap.classList.toggle("expanded");
+    if (wasExpanded) {
+      // Closing via head: scroll the now-closed marker to top.
+      try {
+        wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (err) {
+        wrap.scrollIntoView();
+      }
+    }
   });
 
   return wrap;
@@ -7305,7 +7458,16 @@ function buildCommentaryMap() {
   wrap.appendChild(body);
 
   head.addEventListener("click", () => {
+    const wasExpanded = wrap.classList.contains("expanded");
     wrap.classList.toggle("expanded");
+    if (wasExpanded) {
+      // Closing via head: scroll the now-closed marker to top.
+      try {
+        wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (err) {
+        wrap.scrollIntoView();
+      }
+    }
   });
 
   return wrap;
@@ -7409,49 +7571,68 @@ function buildLetterToc() {
    Mirrors buildLetterToc() so both pages share the same mobile
    widget behavior. The paraphrase page is verse-by-verse, so
    navigation is by chapter (1–6) rather than by argument section. */
+/* Helper: returns a slugified id for a paraphrase section header.
+   Used by both the TOC links and the section headers in the body
+   so the two stay in sync without a shared map. */
+function paraSectionId(chapterNum, sectionTitle) {
+  return "para-sect-" + chapterNum + "-" + slugifyForId(sectionTitle);
+}
+
 function buildParaphraseToc() {
   const toc = el("aside", { class: "letter-toc para-toc ui", "aria-label": "Paraphrase table of contents" });
   toc.appendChild(el("div", { class: "letter-toc-title" }, "Galatians in two voices"));
-  toc.appendChild(el("div", { class: "letter-toc-subtitle" }, "Jump to a chapter"));
+  toc.appendChild(el("div", { class: "letter-toc-subtitle" }, "Jump to a section"));
 
-  const CH_RANGES = {
-    1: "1:1–24",
-    2: "2:1–21",
-    3: "3:1–29",
-    4: "4:1–31",
-    5: "5:1–26",
-    6: "6:1–18"
-  };
-
+  // Mirror the letter TOC structure: chapter heading at top of each
+  // block, sub-section list beneath. CHAPTERS already has the
+  // canonical section list, with titles and KJV-style verse ranges.
   for (let ch = 1; ch <= 6; ch++) {
+    const chapter = CHAPTERS[ch];
+    if (!chapter) continue;
+
     const secWrap = el("div", { class: "letter-toc-section" });
-    // Single entry per chapter: "Galatians N" + "Gal. N:1–NN" range
-    // beneath. No redundant "Read chapter N" line.
-    // The href uses a plain anchor (#para-ch-N) so it scrolls without
-    // triggering a route change (which would land on Home, since
-    // "para-ch-N" doesn't match a known route). Click handler
-    // intercepts and scrolls smoothly to the chapter header.
-    const targetId = "para-ch-" + ch;
-    const secLink = el("a", { class: "letter-toc-section-link", href: "#" + targetId });
+
+    // Chapter heading — links to the chapter anchor (#para-ch-N).
+    const chTargetId = "para-ch-" + ch;
+    const secLink = el("a", { class: "letter-toc-section-link", href: "#" + chTargetId });
     secLink.appendChild(el("span", { class: "toc-roman" }, String(ch)));
     secLink.appendChild(document.createTextNode("Galatians " + ch));
-    secLink.appendChild(el("span", { class: "toc-range para-toc-range" }, "Gal. " + CH_RANGES[ch]));
     secLink.addEventListener("click", e => {
       e.preventDefault();
-      const target = document.getElementById(targetId);
+      const target = document.getElementById(chTargetId);
       if (target) {
-        try {
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-        } catch (err) {
-          target.scrollIntoView();
-        }
+        try { target.scrollIntoView({ behavior: "smooth", block: "start" }); }
+        catch (err) { target.scrollIntoView(); }
       }
     });
     secWrap.appendChild(secLink);
+
+    // Sub-section list — each section links to its own anchor in
+    // the body (#para-sect-N-slug), which is injected as the user
+    // scrolls past each section header.
+    const ul = el("ul", { class: "letter-toc-groups" });
+    chapter.sections.forEach(sect => {
+      const li = el("li");
+      const targetId = paraSectionId(ch, sect.title);
+      const a = el("a", { href: "#" + targetId });
+      a.appendChild(document.createTextNode(sect.title));
+      a.appendChild(el("span", { class: "toc-range" }, "Gal. " + sect.verses));
+      a.addEventListener("click", e => {
+        e.preventDefault();
+        const target = document.getElementById(targetId);
+        if (target) {
+          try { target.scrollIntoView({ behavior: "smooth", block: "start" }); }
+          catch (err) { target.scrollIntoView(); }
+        }
+      });
+      li.appendChild(a);
+      ul.appendChild(li);
+    });
+    secWrap.appendChild(ul);
     toc.appendChild(secWrap);
   }
 
-  toc.appendChild(el("div", { class: "letter-toc-hint" }, "All 149 verses laid out chapter by chapter."));
+  toc.appendChild(el("div", { class: "letter-toc-hint" }, "All 149 verses laid out chapter by chapter, with the natural section headings woven in."));
   return wrapInTocWidget(toc);
 }
 
@@ -7694,6 +7875,31 @@ function renderParaphrase() {
   layout.appendChild(buildParaphraseToc());
   view.appendChild(layout);
 
+  // Build a fast lookup from canonical single-verse ref to the
+  // section it belongs to. The CHAPTERS data uses verseList keys
+  // that sometimes combine verses (e.g. "1:15-16", "2:1-10"), so
+  // we expand each into its constituent single verses ("1:15", "1:16")
+  // and map every one back to its section.
+  const verseToSection = {};
+  for (let ch = 1; ch <= 6; ch++) {
+    const chapter = CHAPTERS[ch];
+    if (!chapter) continue;
+    chapter.sections.forEach((sect, idx) => {
+      sect.verseList.forEach(key => {
+        // key is like "1:15-16" or "1:1"
+        const [chPart, vPart] = key.split(":");
+        if (vPart.includes("-")) {
+          const [start, end] = vPart.split("-").map(n => parseInt(n, 10));
+          for (let v = start; v <= end; v++) {
+            verseToSection[chPart + ":" + v] = { chapterNum: ch, section: sect, sectionIdx: idx };
+          }
+        } else {
+          verseToSection[chPart + ":" + vPart] = { chapterNum: ch, section: sect, sectionIdx: idx };
+        }
+      });
+    });
+  }
+
   // Intro header
   const intro = el("div", { class: "para-intro" });
   intro.appendChild(el("div", { class: "pre-title", html: "A reading" }));
@@ -7702,18 +7908,36 @@ function renderParaphrase() {
   mainCol.appendChild(intro);
 
   // Iterate the flat PARAPHRASE_VERSES list (149 verses) and group
-  // by chapter. The letter commentary uses VERSES (multi-verse chunks);
-  // here we want one row per canonical verse, so we use the
-  // single-verse splits in PARAPHRASE_VERSES.
+  // by chapter AND by section. The letter commentary uses VERSES
+  // (multi-verse chunks); here we want one row per canonical verse,
+  // with chapter and section headers woven in between.
   let currentChapter = 0;
+  let currentSectionId = null;
   PARAPHRASE_VERSES.forEach(verse => {
     const chNum = parseInt(verse.ref.split(":")[0], 10);
+    const sectionInfo = verseToSection[verse.ref];
+
+    // Chapter boundary
     if (chNum !== currentChapter) {
       const chHeader = el("div", { class: "para-chapter-header", id: "para-ch-" + chNum });
       chHeader.appendChild(el("div", { class: "eyebrow", html: "Chapter " + chNum }));
       chHeader.appendChild(el("h3", null, "Galatians " + chNum));
       mainCol.appendChild(chHeader);
       currentChapter = chNum;
+      currentSectionId = null;  // force a section header at the start of each chapter
+    }
+
+    // Section boundary — inject a heading whenever we cross from
+    // one section to the next.
+    if (sectionInfo) {
+      const sectId = paraSectionId(sectionInfo.chapterNum, sectionInfo.section.title);
+      if (sectId !== currentSectionId) {
+        const sectHeader = el("div", { class: "para-section-header", id: sectId });
+        sectHeader.appendChild(el("h4", { class: "para-section-title" }, sectionInfo.section.title));
+        sectHeader.appendChild(el("div", { class: "para-section-range ui" }, "Galatians " + sectionInfo.section.verses));
+        mainCol.appendChild(sectHeader);
+        currentSectionId = sectId;
+      }
     }
 
     const vBlock = el("div", { class: "para-verse", id: "para-v-" + verse.ref });
@@ -7736,13 +7960,54 @@ function renderParaphrase() {
   });
 }
 
+/* Expand an excursus without moving the page. Because expanding
+   triggers a full re-render of the view, the marker's position in
+   the document changes. We capture the marker's viewport top BEFORE
+   the render, then after the new (expanded) marker is in the DOM,
+   we adjust window scroll by the delta. Net effect: the marker
+   stays exactly where the user clicked it. */
+function expandExcursus(exId, currentEl) {
+  const beforeTop = currentEl ? currentEl.getBoundingClientRect().top : null;
+  STATE.excursusesOpen.add(exId);
+  render();
+  if (beforeTop == null) return;
+  // Synchronously adjust scroll so the marker stays put. Doing this
+  // in the same task (no setTimeout) avoids a visible jump.
+  const newEl = document.getElementById("ex-" + exId);
+  if (!newEl) return;
+  const afterTop = newEl.getBoundingClientRect().top;
+  const delta = afterTop - beforeTop;
+  if (delta !== 0) {
+    // Plain instant scroll (no smooth) so the adjustment is
+    // imperceptible — the marker appears to stay in place.
+    window.scrollBy(0, delta);
+  }
+}
+
+/* Collapse an excursus, then scroll so the (now closed) marker
+   lands at the top of the viewport. The wait gives the re-render
+   time to paint before we compute the target position. */
+function collapseExcursus(exId) {
+  STATE.excursusesOpen.delete(exId);
+  render();
+  setTimeout(() => {
+    const target = document.getElementById("ex-" + exId);
+    if (!target) return;
+    try {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      target.scrollIntoView();
+    }
+  }, 80);
+}
+
 function buildExcursusMarker(ex) {
   const wrap = el("div", { class: "excursus-marker", id: "ex-" + ex.id });
   wrap.dataset.excursusId = ex.id;
 
   if (STATE.excursusesOpen.has(ex.id)) {
     wrap.classList.add("expanded");
-    wrap.appendChild(el("div", { class: "ex-label", html: "Excursus" }));
+    wrap.appendChild(el("div", { class: "ex-label", html: "Deep Dive" }));
     wrap.appendChild(el("div", { class: "ex-title" }, ex.title + (ex.subtitle ? " \u2014 " + ex.subtitle : "")));
     const body = el("div", { class: "excursus-body" });
 
@@ -7752,24 +8017,12 @@ function buildExcursusMarker(ex) {
     const xBtn = el("button", {
       class: "collapsible-close",
       type: "button",
-      "aria-label": "Close this excursus"
+      "aria-label": "Close this deep dive"
     });
     xBtn.appendChild(svgIcon("i-x"));
     xBtn.addEventListener("click", e => {
       e.stopPropagation();
-      const exId = ex.id;
-      STATE.excursusesOpen.delete(exId);
-      render();
-      setTimeout(() => {
-        const target = document.getElementById("ex-" + exId);
-        if (target) {
-          try {
-            target.scrollIntoView({ behavior: "smooth", block: "start" });
-          } catch (err) {
-            target.scrollIntoView();
-          }
-        }
-      }, 80);
+      collapseExcursus(ex.id);
     });
     body.appendChild(xBtn);
 
@@ -7778,26 +8031,20 @@ function buildExcursusMarker(ex) {
       else if (b.type === "h") body.appendChild(el("h4", { style: "font-size: 17px; font-weight: 500; margin: 18px 0 8px; font-family: inherit;" }, b.text));
     });
     wrap.appendChild(body);
-    const closeBtn = el("button", { class: "excursus-close ui" }, "Collapse this excursus");
+    const closeBtn = el("button", { class: "excursus-close ui" }, "Collapse this deep dive");
     closeBtn.addEventListener("click", () => {
-      STATE.excursusesOpen.delete(ex.id);
-      render();
+      collapseExcursus(ex.id);
     });
     wrap.appendChild(closeBtn);
   } else {
-    wrap.appendChild(el("div", { class: "ex-label", html: "Excursus" }));
+    wrap.appendChild(el("div", { class: "ex-label", html: "Deep Dive" }));
     wrap.appendChild(el("div", { class: "ex-title" }, ex.title + (ex.subtitle ? " \u2014 " + ex.subtitle : "")));
     const prompt = el("div", { class: "ex-prompt" });
     prompt.appendChild(el("span", null, ex.prompt));
     prompt.appendChild(svgIcon("i-chevron-right"));
     wrap.appendChild(prompt);
     wrap.addEventListener("click", () => {
-      STATE.excursusesOpen.add(ex.id);
-      render();
-      setTimeout(() => {
-        const newEl = document.getElementById("ex-" + ex.id);
-        if (newEl) newEl.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
+      expandExcursus(ex.id, wrap);
     });
   }
   return wrap;
@@ -7828,6 +8075,89 @@ function applyParaSlider() {
   });
 }
 
+/* "What exactly is a thread?" — a small dropdown article that sits
+   at the top of the Threads page, teaching the reader how the
+   threads work before they meet any one thread in particular.
+   Reuses the .structure-note collapsible pattern so the visual
+   language matches the "About this commentary's structure" note
+   on the letter page. */
+function buildWhatIsAThread() {
+  const wrap = el("div", { class: "structure-note" });
+  const head = el("div", { class: "sn-head" });
+  head.appendChild(svgIcon("i-info"));
+  head.appendChild(el("span", { class: "sn-title", html: "What exactly is a thread?" }));
+  const chev = svgIcon("i-chevron-down");
+  chev.classList.add("sn-chev");
+  head.appendChild(chev);
+  wrap.appendChild(head);
+
+  const body = el("div", { class: "sn-body" });
+  body.appendChild(buildCollapsibleClose(wrap, () => {
+    wrap.classList.remove("expanded");
+  }));
+  const paragraphs = [
+    "<p>A thread is a single theological conviction that Paul returns to again and again across the letter, often in different language each time. He does not pause to define his terms or repeat himself; he simply weaves the same idea back through the argument wherever it serves him.</p>",
+    "<p>Take the apocalyptic thread, for example. Paul names it in the greeting \u2014 Christ \u201cgave Himself for our sins, that He might deliver us from this present evil age\u201d (1:4). The phrase sits in a four-verse hello, and most readers pass over it on the way to the controversy. But Paul reaches back for that same conviction at 4:4 (\u201cwhen the fulness of the time was come\u201d), again at 6:14 (\u201cthe world is crucified unto me\u201d), and again at 6:15 (\u201ca new creature\u201d). Once the reader sees the thread the first time, he begins to see it everywhere. The greeting was not throat-clearing. It was the keynote.</p>",
+    "<p>That is what a thread is. A conviction sounded once, then sounded again, then again \u2014 until the careful reader hears the whole letter humming with it.</p>",
+    "<p>Each of the five threads in this commentary works the same way. The pages that follow trace where each one surfaces, what Paul is doing with it at that point, and how the thread fits into his larger argument. The threads are also marked in the margin of the commentary itself wherever they appear, so the reader can follow any one of them from chapter one through chapter six.</p>"
+  ];
+  const tmp = document.createElement("div");
+  tmp.innerHTML = paragraphs.join("");
+  while (tmp.firstChild) body.appendChild(tmp.firstChild);
+  wrap.appendChild(body);
+
+  head.addEventListener("click", () => {
+    const wasExpanded = wrap.classList.contains("expanded");
+    wrap.classList.toggle("expanded");
+    if (wasExpanded) {
+      try {
+        wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (err) {
+        wrap.scrollIntoView();
+      }
+    }
+  });
+
+  return wrap;
+}
+
+/* Resolve a visible verse reference ("4:4", "6:14-15", etc.) to the
+   commentary chunk that actually exists in VERSES ("4:1-7", "6:11-18", etc.).
+   Without this, thread timelines and a few reference links silently become
+   unclickable whenever the commentary groups several verses together. */
+function parseVerseRange(ref) {
+  if (!ref) return null;
+  const cleaned = String(ref)
+    .replace(/Galatians\s*/i, "")
+    .replace(/[–—]/g, "-")
+    .trim();
+  const match = cleaned.match(/^(\d+):(\d+)(?:-(\d+))?/);
+  if (!match) return null;
+  const chapter = parseInt(match[1], 10);
+  const start = parseInt(match[2], 10);
+  const end = match[3] ? parseInt(match[3], 10) : start;
+  return { chapter, start, end };
+}
+
+function verseRangeContains(containerRef, targetRef) {
+  const container = parseVerseRange(containerRef);
+  const target = parseVerseRange(targetRef);
+  if (!container || !target) return false;
+  return container.chapter === target.chapter &&
+         target.start >= container.start &&
+         target.end <= container.end;
+}
+
+function resolveVerseAnchor(ref) {
+  const parsed = parseVerseRange(ref);
+  if (!parsed) return null;
+  const normalized = parsed.start === parsed.end
+    ? `${parsed.chapter}:${parsed.start}`
+    : `${parsed.chapter}:${parsed.start}-${parsed.end}`;
+  if (VERSES[normalized]) return normalized;
+  return Object.keys(VERSES).find(key => verseRangeContains(key, normalized)) || null;
+}
+
 /* =========================================================
    THREAD PAGES
    ========================================================= */
@@ -7842,12 +8172,14 @@ function renderThreads() {
   if (!page) { view.appendChild(el("p", null, "Thread page not built yet.")); return; }
 
   // Intro block — moved here from First time here. Eyebrow, title,
-  // and a one-sentence intro framing what the threads are. The pills
-  // below this intro let the reader pick which thread to read.
+  // and a "What is a thread?" dropdown article that teaches the
+  // reader how to read the threads before the thread itself is
+  // presented. The pills below this intro let the reader pick
+  // which thread to read.
   const introBlock = el("div", { class: "threads-intro" });
   introBlock.appendChild(el("div", { class: "section-label ui", html: "The five threads at a glance" }));
   introBlock.appendChild(el("h2", { class: "section-title" }, "Theological threads woven through the letter"));
-  introBlock.appendChild(el("p", { class: "section-tagline" }, "These five threads recur throughout Galatians. Each is named in the margin wherever it surfaces in the commentary, and each has its own essay."));
+  introBlock.appendChild(buildWhatIsAThread());
   view.appendChild(introBlock);
 
   // Switcher
@@ -7880,10 +8212,10 @@ function renderThreads() {
   const stops = el("div", { class: "stops" });
   page.timeline.forEach((vref, i) => {
     if (i > 0) stops.appendChild(el("span", { class: "sep", html: "\u2192" }));
-    const verseExists = VERSES[vref] != null;
-    const stop = el(verseExists ? "a" : "span", {
+    const anchor = resolveVerseAnchor(vref);
+    const stop = el(anchor ? "a" : "span", {
       class: "stop",
-      ...(verseExists ? { href: `#/letter/${vref}` } : {})
+      ...(anchor ? { href: `#/letter/${anchor}` } : {})
     }, vref.replace(/-/, "\u2013"));
     stops.appendChild(stop);
   });
@@ -7894,8 +8226,9 @@ function renderThreads() {
   page.appearances.forEach(app => {
     const wrap = el("div", { class: `appearance ${threadId}` });
     const refLine = el("p", { class: "app-ref" });
-    if (app.verseAnchor && VERSES[app.verseAnchor]) {
-      const link = el("a", { href: `#/letter/${app.verseAnchor}` }, app.ref);
+    const anchor = resolveVerseAnchor(app.verseAnchor);
+    if (anchor) {
+      const link = el("a", { href: `#/letter/${anchor}` }, app.ref);
       refLine.appendChild(link);
     } else {
       refLine.textContent = app.ref;
@@ -8096,10 +8429,10 @@ function buildSearchIndex() {
 
   Object.values(EXCURSUSES).forEach(ex => {
     items.push({
-      type: "Excursus",
+      type: "Deep Dive",
       title: ex.title,
       text: [ex.subtitle, ex.prompt, ...(ex.body || []).map(b => b.text)].join(" "),
-      href: "#/excursus/" + ex.id
+      href: "#/deep-dives/" + ex.id
     });
   });
 
@@ -8140,8 +8473,8 @@ function renderExcursusPage() {
   view.innerHTML = "";
 
   view.appendChild(el("div", { class: "section-label ui", html: "Reference" }));
-  view.appendChild(el("h2", { class: "section-title" }, "Excursus"));
-  view.appendChild(el("p", { class: "section-tagline" }, "The longer side essays gathered in one place. They still remain at their natural locations inside The Letter; this page simply lets you read them without hunting through the commentary."));
+  view.appendChild(el("h2", { class: "section-title" }, "Deep Dives"));
+  view.appendChild(el("p", { class: "section-tagline" }, "The longer deep-dive essays gathered in one place. They still remain at their natural locations inside The Letter; this page simply lets you read them without hunting through the commentary."));
 
   const page = el("div", { class: "excursus-page" });
   Object.values(EXCURSUSES).forEach(ex => {
@@ -8159,7 +8492,7 @@ function renderSearch() {
   view.innerHTML = "";
   view.appendChild(el("div", { class: "section-label ui", html: "Study edition" }));
   view.appendChild(el("h2", { class: "section-title" }, "Search"));
-  view.appendChild(el("p", { class: "section-tagline" }, "Search passages, commentary, front-door essays, Greek terms, excursuses, threads, people, places, and scholar notes."));
+  view.appendChild(el("p", { class: "section-tagline" }, "Search passages, commentary, front-door essays, Greek terms, deep dives, threads, people, places, and scholar notes."));
 
   const page = el("div", { class: "search-page" });
   const wrap = el("div", { class: "search-box-wrap" });
@@ -8830,7 +9163,7 @@ const ABOUT_SECTIONS = {
     byline: "",
     blocks: [
       { type: "p", text: "This site is a companion to No Other Gospel — Elder Michael L. Montgomery's pastoral commentary on Paul's letter to the Galatians. Where the printed book offers careful exposition page by page, the site offers something the page cannot: the connections that run across the whole letter." },
-      { type: "p", text: "Five thematic threads weave through Galatians — the apocalyptic age, the faithfulness of Christ, faith as covenant badge, participation in Christ, and the eternal/temporal salvation framework that keeps every warning correctly aimed. The site lets you follow any of them from beginning to end. Greek terms are clickable. Excursuses appear at their natural anchor points and are also gathered on their own page, expandable and collapsible. Verses can be pinned for later return." },
+      { type: "p", text: "Five thematic threads weave through Galatians — the apocalyptic age, the faithfulness of Christ, faith as covenant badge, participation in Christ, and the eternal/temporal salvation framework that keeps every warning correctly aimed. The site lets you follow any of them from beginning to end. Greek terms are clickable. Deep dives appear at their natural anchor points and are also gathered on their own page, expandable and collapsible. Verses can be pinned for later return." },
       { type: "p", text: "Both formats work from the same body of text. Neither is more authoritative; each is native to its medium. The book is for the armchair and the pen. The site is for the hands and the moment of curiosity." },
       { type: "small", html: `<strong>${META.author}</strong> is the author of <em>No Other Gospel</em>. The work is published by <strong>${META.publisher}</strong>, with editorial work by ${META.publisherEditors}.` }
     ]
@@ -8894,10 +9227,10 @@ const ABOUT_SECTIONS = {
     title: "How to use this site",
     byline: "",
     blocks: [
-      { type: "p", text: "The digital edition is built to do what a printed page cannot easily do: let the reader move quickly through the argument, trace themes across the whole letter, open excursuses where they belong, and return to important passages without losing the thread." },
-      { type: "p", text: "Use the Map for the shape of the whole letter. Use The letter for the full commentary. Use Paraphrase for clean parallel reading. Use Threads to follow the five recurring theological lines. Use Glossary for Greek terms, Excursus for collected side essays, Search for quick finding, and Scholars for a short guide to major voices behind the interpretive conversation." },
+      { type: "p", text: "The digital edition is built to do what a printed page cannot easily do: let the reader move quickly through the argument, trace themes across the whole letter, open deep dives where they belong, and return to important passages without losing the thread." },
+      { type: "p", text: "Use the Map for the shape of the whole letter. Use The letter for the full commentary. Use Paraphrase for clean parallel reading. Use Threads to follow the five recurring theological lines. Use Glossary for Greek terms, Deep Dives for collected side essays, Search for quick finding, and Scholars for a short guide to major voices behind the interpretive conversation." },
       { type: "p", text: "The site is intentionally a companion, not a replacement. The printed book gives the commentary its settled form. The digital edition gives the reader handles: movement, cross-reference, search, and return." },
-      { type: "small", html: "Enhanced single-file edition. Includes the reading map, full letter view, paraphrase view, thread trackers, Greek glossary, local search, excursus page, scholar guide, argument tracer, and pinned passages." }
+      { type: "small", html: "Enhanced single-file edition. Includes the reading map, full letter view, paraphrase view, thread trackers, Greek glossary, local search, deep dives page, scholar guide, argument tracer, and pinned passages." }
     ]
   },
   acknowledgments: {
@@ -9261,10 +9594,10 @@ function renderAbout(sectionKey) {
   if (key === "digital-edition") {
     page.appendChild(el("h3", null, "Print"));
     page.appendChild(el("p", null,
-      "The site is designed to print cleanly. Use the printer button at the top of any page, or press Cmd-P (Mac) or Ctrl-P (Windows) to print the view you are currently reading. Chrome is stripped, layout collapses to a single column, and excurses expand inline so nothing is hidden behind a click."
+      "The site is designed to print cleanly. Use the printer button at the top of any page, or press Cmd-P (Mac) or Ctrl-P (Windows) to print the view you are currently reading. Chrome is stripped, layout collapses to a single column, and deep dives expand inline so nothing is hidden behind a click."
     ));
     page.appendChild(el("p", null,
-      "For a complete printed companion to the digital edition \u2014 letter, paraphrase, threads, glossary, excursuses, scholar guide, and front matter \u2014 use the button below. The browser will assemble it into a single PDF you can save or print."
+      "For a complete printed companion to the digital edition \u2014 letter, paraphrase, threads, glossary, deep dives, scholar guide, and front matter \u2014 use the button below. The browser will assemble it into a single PDF you can save or print."
     ));
 
     const actionRow = el("div", { class: "print-action-row" });
@@ -9508,7 +9841,17 @@ function parseRoute() {
 }
 
 function render() {
-  const { route, param } = parseRoute();
+  let { route, param } = parseRoute();
+  // User-facing route alias. Keep the internal name "excursus" so existing
+  // state, ids, and older #/excursus links keep working, but let the site
+  // display and link to the warmer "Deep Dives" label.
+  if (route === "deep-dives") route = "excursus";
+  // Detect whether this render is a route change vs an in-page
+  // state update (excursus expand/collapse, pin toggle, slider, etc.).
+  // For route changes, we want to scroll to top of the new page; for
+  // in-page updates, scrolling to top is jarring and overrides the
+  // careful position-preservation logic in expandExcursus/collapseExcursus.
+  const isRouteChange = (STATE.route !== route) || (STATE.routeParam !== param);
   STATE.route = route;
   STATE.routeParam = param;
 
@@ -9527,7 +9870,7 @@ function render() {
     case "first-time":
       renderFirstTime();
       document.getElementById("view-first-time").classList.add("active");
-      window.scrollTo(0, 0);
+      if (isRouteChange) window.scrollTo(0, 0);
       break;
     case "reading-galatians":
       renderReadingGalatians();
@@ -9541,7 +9884,7 @@ function render() {
           }
         }, 80);
       } else {
-        window.scrollTo(0, 0);
+        if (isRouteChange) window.scrollTo(0, 0);
       }
       break;
     case "letter":
@@ -9554,7 +9897,7 @@ function render() {
           if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 80);
       } else {
-        window.scrollTo(0, 0);
+        if (isRouteChange) window.scrollTo(0, 0);
       }
       break;
     case "paraphrase":
@@ -9566,18 +9909,18 @@ function render() {
           if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 80);
       } else {
-        window.scrollTo(0, 0);
+        if (isRouteChange) window.scrollTo(0, 0);
       }
       break;
     case "threads":
       renderThreads();
       document.getElementById("view-threads").classList.add("active");
-      window.scrollTo(0, 0);
+      if (isRouteChange) window.scrollTo(0, 0);
       break;
     case "glossary":
       renderGlossary();
       document.getElementById("view-glossary").classList.add("active");
-      window.scrollTo(0, 0);
+      if (isRouteChange) window.scrollTo(0, 0);
       break;
     case "excursus":
       if (param && EXCURSUSES[param]) STATE.excursusesOpen.add(param);
@@ -9589,13 +9932,13 @@ function render() {
           if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 80);
       } else {
-        window.scrollTo(0, 0);
+        if (isRouteChange) window.scrollTo(0, 0);
       }
       break;
     case "search":
       renderSearch();
       document.getElementById("view-search").classList.add("active");
-      window.scrollTo(0, 0);
+      if (isRouteChange) window.scrollTo(0, 0);
       break;
     case "scholars":
       // The standalone Scholars page has been merged into the About area.
@@ -9605,7 +9948,7 @@ function render() {
     case "about":
       renderAbout(param);
       document.getElementById("view-about").classList.add("active");
-      window.scrollTo(0, 0);
+      if (isRouteChange) window.scrollTo(0, 0);
       break;
     default:
       renderHome();
